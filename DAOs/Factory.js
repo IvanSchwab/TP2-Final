@@ -1,4 +1,4 @@
-import XMemoryDao from "./Memory/XMemoryDao.js";
+import LibroDAO from "./Memory/LibroDao.js";
 
 class Factory {
   constructor() {}
@@ -6,20 +6,17 @@ class Factory {
   static factory = (modo) => {
     if (modo === "memory") {
       return {
-        xDao: new XMemoryDao(),
-        userDao: "useMemoryDao",
+        libroDao: new LibroDAO(),
       };
     }
     if (modo === "sql") {
       return {
-        xDao: "xSqlDao",
-        userDao: "userSqlDao",
+        libroDao: "libroSqlDao",
       };
     }
     if (modo === "mongo") {
       return {
-        xDao: "xMongoDao",
-        userDao: "userMongoDao",
+        libroDao: "libroMongoDao",
       };
     }
   };

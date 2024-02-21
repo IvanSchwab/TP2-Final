@@ -1,9 +1,9 @@
 import { Router } from "express";
-import xRoutes from "./xRoutes.js";
+import librosRoutes from "./librosRoutes.js";
 
 const router = Router();
 
-router.use("/x", xRoutes)
+router.use("/libro", librosRoutes)
 
 
 export default router
