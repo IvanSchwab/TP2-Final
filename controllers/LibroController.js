@@ -1,8 +1,8 @@
-import LibroDAO from "../DAOs/Memory/LibroDao.js";
+import LibroDAO from "../DAOs/Memory/LibroMemoryDao.js";
 import axios from "axios";
 const libroDAO = new LibroDAO();
 import LibroApi from "../Api/LibroApi.js";
-
+import Libro from "../Models/Libro.js";
 
 class LibroController {
   constructor() {
@@ -11,18 +11,29 @@ class LibroController {
   crearLibro = async (req, res) => {
     try {
       const { codigo, titulo, autor } = req.body;
-      const nuevoLibro = {
-        codigo,
-        titulo,
-        autor,
-        estado: "disponible",
-      };
-      const libroCreado = await this.libroApi.altaLibro(nuevoLibro);
-      res.status(200).send({ message: "Libro creado" });
-      res.status(201).json(libroCreado);
+
+      if (!codigo || !titulo || !autor) {
+        res
+          .status(500)
+          .json({ errorMsg: "Código, título y autor son campos requeridos." });
+      }
+
+      const existeLibro = await this.libroApi.obtenerLibroPorCodigo(codigo);
+      if (existeLibro) {
+        res
+          .status(500)
+          .json({ errorMsg: "El libro con este código ya existe." });
+      }
+
+      const nuevoLibro = new Libro(codigo, titulo, autor);
+      await this.libroApi.altaLibro(nuevoLibro);
+
+      res
+        .status(201)
+        .json({ message: "Libro creado exitosamente.", libro: nuevoLibro });
     } catch (error) {
-      console.error(error);
-      res.status(500).json({ errorMsg: "Error al agregar el libro" });
+      console.error("Error al crear el libro:", error.message);
+      res.status(500).json({ errorMsg: "Error al crear el libro." });
     }
   };
 
@@ -44,39 +55,39 @@ class LibroController {
   alquilarLibro = async (req, res) => {
     try {
       const codigoLibro = req.params.codigo;
-      let libro = await this.libroApi.alquilarLibro(codigoLibro);
+      let libro = await this.libroApi.obtenerLibroPorCodigo(codigoLibro);
       if (!libro) {
         return res.status(404).json({ errorMsg: "Libro no encontrado" });
       }
-      if (libro.estado !== "disponible") {
+
+      if (libro.estado === "disponible") {
+        const response = await axios.get("https://libros.deno.dev/premios");
+        const { sorteo, premio } = response.data;
+        if (premio) {
+          await libroDAO.eliminarPorCodigo(codigoLibro);
+          return res.status(200).json({
+            message:
+              "¡Has ganado un premio! El libro se ha dado de baja automáticamente.",
+          });
+        }
+        await this.libroApi.alquilarLibro(codigoLibro);
+        await libroDAO.actualizar(libro);
+        return res.status(200).json(libro);
+      } else {
         return res
           .status(400)
           .json({ errorMsg: "El libro no está disponible para alquilar" });
       }
-
-      const response = await axios.get("https://libros.deno.dev/premios");
-      const { sorteo, premio } = response.data;
-      if (premio) {
-        await libroDAO.eliminarPorCodigo(codigoLibro);
-        return res.status(200).json({
-          message:
-            "¡Has ganado un premio! El libro se ha dado de baja automáticamente.",
-        });
-      }
-
-      libro.estado = "alquilado";
-      await libroDAO.actualizar(libro);
-      res.status(200).json(libro);
     } catch (error) {
       console.error(error);
-      res.status(500).json({ errorMsg: "Error al alquilar el libro" });
+      return res.status(500).json({ errorMsg: "Error al alquilar el libro" });
     }
   };
 
-  devolverLibro = async (req, res) => {
+  obtenerLibroPorCodigo = async (req, res) => {
     try {
       const codigoLibro = req.params.codigo;
-      let libro = await this.libroApi.devolverLibro(codigoLibro);
+      let libro = await this.libroApi.obtenerLibroPorCodigo(codigoLibro);
       if (!libro) {
         return res.status(404).json({ errorMsg: "Libro no encontrado" });
       }

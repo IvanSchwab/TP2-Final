@@ -1,12 +1,14 @@
-import LibroDAO from "./Memory/LibroDao.js";
+import LibroMemoryDao from "./Memory/LibroMemoryDao.js";
 
 class Factory {
-  constructor() {}
+  constructor() {
+    this.libroDao = new LibroMemoryDao();
+  }
 
   static factory = (modo) => {
     if (modo === "memory") {
       return {
-        libroDao: new LibroDAO(),
+        libroDao: new LibroMemoryDao(),
       };
     }
     if (modo === "sql") {
